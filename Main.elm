@@ -12,13 +12,24 @@ type alias Model =
 type alias Size =
     { width : Int, height : Int }
 
-type Frame =
-    SingleImage { url : String }
+type Frame
+    = SingleImage { url : String }
+    | HorizontalSplit 
+        { top : Frame 
+        , topHeight : Int
+        , bottom : Frame 
+        }
 
 initialModel : Model
 initialModel = 
     { canvas = { width = 250, height =  250}
-    , frame = SingleImage { url = "http://i.imgur.com/bjjypBA.jpg" }
+    , frame = 
+        HorizontalSplit 
+        { top = SingleImage { url = "http://i.imgur.com/bjjypBA.jpg" }
+        , topHeight = 80 
+        , bottom = SingleImage { url = "http://imgur.com/K02jg2O.jpg" }
+        }
+        
     }
 
 type Msg = NothingYet
@@ -53,6 +64,11 @@ viewFrame size frame =
                     ]
                 ]
                 []
+        HorizontalSplit {top, topHeight, bottom} ->
+            Html.div []
+            [ viewFrame { width = size.width, height = topHeight } top 
+            , viewFrame { width = size.width, height = (size.height - topHeight) } bottom
+            ]
 
 view : Model -> Html.Html Msg
 view model =
