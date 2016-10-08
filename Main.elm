@@ -91,7 +91,7 @@ viewFrame borderSize size frame =
                     ]
                 ]
                 []
-            , viewFrame borderSize { width = size.width, height = (size.height - topHeight) } bottom
+            , viewFrame borderSize { width = size.width, height = (size.height - topHeight - borderSize ) } bottom
             ]
 
 view : Model -> Html.Html Msg
