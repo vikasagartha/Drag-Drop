@@ -9,6 +9,7 @@ type alias Size =
 
 type Frame
     = SingleImage { url : String }
+    | HorizontalSplit { top : String, bottom : String }
 
 type alias Model =
     { canvas : Size, frame : Frame }
@@ -22,9 +23,8 @@ initialModel =
         , height = 250 
         }
     , frame = 
-        SingleImage 
-        { url = "http://i.imgur.com/bjjypBA.jpg"
-        }
+        HorizontalSplit 
+            { top = "http://i.imgur.com/bjjypBA.jpg", bottom = "http://i.imgur.com/K02jg2O.jpg" }
     }
 
 --Update
@@ -49,6 +49,27 @@ viewFrame size frame =
                     ]
                 ]
                 []
+        HorizontalSplit { top, bottom } ->
+            Html.div []
+            [ Html.div
+                [ Html.Attributes.style 
+                    [ ("height", toString (size.height//2) ++ "px")
+                    , ("width", toString size.width ++ "px")
+                    , ("background-image", "url("++top++")") 
+                    , ("background-size", "auto " ++ toString size.width ++ "px")
+                    ]
+                ]
+                []
+            , Html.div
+                [ Html.Attributes.style 
+                    [ ("height", toString (size.height//2) ++ "px")
+                    , ("width", toString size.width ++ "px")
+                    , ("background-image", "url("++bottom++")") 
+                    , ("background-size", "auto " ++ toString size.width ++ "px")
+                    ]
+                ]
+                []
+            ]
 
 
 viewCanvas : Size -> Frame -> Html.Html Msg
