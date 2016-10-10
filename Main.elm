@@ -4,13 +4,28 @@ import Html
 import Html.App
 import Html.Attributes
 
+type alias Size = 
+    { width : Int, height : Int }
+
+type Frame
+    = SingleImage { url : String }
+
+type alias Model =
+    { canvas : Size, frame : Frame }
 
 --Init 
-type alias Model = ()
 
 initialModel : Model
 initialModel =
-    ()
+    { canvas = 
+        { width = 250
+        , height = 250 
+        }
+    , frame = 
+        SingleImage 
+        { url = "http://i.imgur.com/bjjypBA.jpg"
+        }
+    }
 
 --Update
 type Msg = NothingYet
@@ -20,23 +35,32 @@ update msg model =
     (model, Cmd.none)
 
 --View
-viewCanvas : Html.Html Msg
-viewCanvas =
+
+viewFrame : Size -> Frame -> Html.Html Msg
+viewFrame size frame = 
+    case frame of 
+        SingleImage { url } ->
+            Html.div
+                [ Html.Attributes.style 
+                    [ ("height", toString size.height ++ "px")
+                    , ("width", toString size.width ++ "px")
+                    , ("background-image", "url("++url++")") 
+                    , ("background-size", "auto " ++ toString size.width ++ "px")
+                    ]
+                ]
+                []
+
+
+viewCanvas : Size -> Frame -> Html.Html Msg
+viewCanvas size rootFrame =
     Html.div 
         [ Html.Attributes.style 
-            [ ("width", "250px") 
-            , ("height", "250px") 
+            [ ("width", toString size.width ++ "px") 
+            , ("height", toString size.height ++ "px") 
             , ("border", "2px solid black") 
             ]
         ]
-        [ Html.div
-            [ Html.Attributes.style 
-                [ ("height", "250px") 
-                , ("background-image", "url(http://i.imgur.com/bjjypBA.jpg)") 
-                , ("background-size", "auto 250px") 
-                ]
-            ]
-            []
+        [ viewFrame size rootFrame 
         ]
 
 view : Model -> Html.Html Msg
@@ -46,7 +70,7 @@ view model =
             [ ("padding", "8px") 
             ]
         ]
-        [ viewCanvas
+        [ viewCanvas model.canvas model.frame
         , Html.hr [] []
         , Html.text <| toString model 
         ]
