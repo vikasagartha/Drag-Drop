@@ -9,7 +9,11 @@ type alias Size =
 
 type Frame
     = SingleImage { url : String }
-    | HorizontalSplit { top : String, bottom : String }
+    | HorizontalSplit 
+        { top : Frame
+        , bottom : Frame
+        , topHeight : Int
+        }
 
 type alias Model =
     { canvas : Size, frame : Frame }
@@ -24,7 +28,10 @@ initialModel =
         }
     , frame = 
         HorizontalSplit 
-            { top = "http://i.imgur.com/bjjypBA.jpg", bottom = "http://i.imgur.com/K02jg2O.jpg" }
+            { top = SingleImage  { url = "http://i.imgur.com/bjjypBA.jpg" }
+            , bottom = SingleImage { url = "http://i.imgur.com/K02jg2O.jpg" }
+            , topHeight = 80
+            }
     }
 
 --Update
@@ -45,30 +52,14 @@ viewFrame size frame =
                     [ ("height", toString size.height ++ "px")
                     , ("width", toString size.width ++ "px")
                     , ("background-image", "url("++url++")") 
-                    , ("background-size", "auto " ++ toString size.width ++ "px")
+                    , ("background-size", "auto " ++ toString size.height ++ "px")
                     ]
                 ]
                 []
-        HorizontalSplit { top, bottom } ->
+        HorizontalSplit { top, topHeight, bottom } ->
             Html.div []
-            [ Html.div
-                [ Html.Attributes.style 
-                    [ ("height", toString (size.height//2) ++ "px")
-                    , ("width", toString size.width ++ "px")
-                    , ("background-image", "url("++top++")") 
-                    , ("background-size", "auto " ++ toString size.width ++ "px")
-                    ]
-                ]
-                []
-            , Html.div
-                [ Html.Attributes.style 
-                    [ ("height", toString (size.height//2) ++ "px")
-                    , ("width", toString size.width ++ "px")
-                    , ("background-image", "url("++bottom++")") 
-                    , ("background-size", "auto " ++ toString size.width ++ "px")
-                    ]
-                ]
-                []
+            [ viewFrame { width = size.width, height = topHeight } top
+            , viewFrame { width = size.width, height = size.height - topHeight } bottom
             ]
 
 
