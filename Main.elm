@@ -3,6 +3,9 @@ module Main exposing (..)
 import Html
 import Html.App
 import Html.Attributes
+import Html.Events
+import Json.Decode
+import Mouse 
 
 borderColor : String
 borderColor =
@@ -43,11 +46,13 @@ initialModel =
     }
 
 --Update
-type Msg = NothingYet
+type Msg = DragDividerStart Mouse.Position
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
-    (model, Cmd.none)
+    case Debug.log "msg" msg of
+        DragDividerStart position ->
+            (model, Cmd.none)
 
 --View
 
@@ -68,13 +73,16 @@ viewFrame borderSize size frame =
             Html.div []
             [ viewFrame borderSize { width = size.width, height = topHeight } top
             , Html.div 
-             [ Html.Attributes.style
-                [ ("width", toString size.width ++ "px")
-                , ("height", toString borderSize ++ "px")
-                , ("background-color", borderColor)
+                [ Html.Attributes.style
+                    [ ("width", toString size.width ++ "px")
+                    , ("height", toString borderSize ++ "px")
+                    , ("background-color", borderColor)
+                    , ("cursor", "ns-resize")
+                    ]
+                , Html.Events.on "mousedown" 
+                    (Json.Decode.map DragDividerStart Mouse.position)
                 ]
-             ] 
-             []
+                []
             , viewFrame borderSize { width = size.width, height = size.height - topHeight - borderSize } bottom
             ]
 
