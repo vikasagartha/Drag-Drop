@@ -63,10 +63,20 @@ initialModel =
                     , offset = { x = 0, y = 0} 
                     }
             , bottom = 
-                SingleImage 
-                    { url = "http://i.imgur.com/K02jg2O.jpg" 
-                    , size = { width = 960, height = 618 } 
-                    , offset = { x = 0, y = 0} 
+                HorizontalSplit
+                    { top = 
+                        SingleImage  
+                            { url = "http://i.imgur.com/K02jg2O.jpg" 
+                            , size = { width = 960, height = 637 }
+                            , offset = { x = 0, y = 0}
+                            }
+                    , topHeight = 100
+                    , bottom =
+                        SingleImage  
+                            { url = "http://i.imgur.com/D16OmU6.jpg"
+                            , size = { width = 960, height = 720 }
+                            , offset = { x = 0, y = 0}
+                            }
                     }
             , topHeight = 80
             }
@@ -75,30 +85,19 @@ initialModel =
 
 --Update
 type Msg 
-    = DragDividerStart Mouse.Position
-    | DragImageStart Mouse.Position
+    = DragStart FramePath Mouse.Position
     | DragMove Mouse.Position
     | DragEnd Mouse.Position
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
     case Debug.log "msg" msg of
-        DragDividerStart position ->
+        DragStart path position ->
             ( { model 
                 | dragState = 
                     Just 
                         { startPosition = position
-                        , path = [] --TODO 
-                        } 
-              }
-            , Cmd.none
-            )
-        DragImageStart position ->
-            ( { model 
-                | dragState = 
-                    Just 
-                        { startPosition = position
-                        , path = [] --TODO 
+                        , path = List.reverse path 
                         } 
               }
             , Cmd.none
@@ -136,11 +135,31 @@ applyDrag path change frame =
     --TODO
     case frame of
         HorizontalSplit {top, topHeight, bottom} ->
-            HorizontalSplit 
-                { top = top
-                , bottom = bottom
-                , topHeight = topHeight - change.y
-                }
+            case path of
+                [] ->
+                    HorizontalSplit 
+                        { top = top
+                        , bottom = bottom
+                        , topHeight = topHeight - change.y
+                        }
+                0 :: rest ->
+                    HorizontalSplit
+                        { top = applyDrag rest change top
+                        , bottom = bottom
+                        , topHeight = topHeight
+                        }
+                1 :: rest ->
+                    HorizontalSplit
+                        { top = top
+                        , bottom = applyDrag rest change bottom
+                        , topHeight = topHeight
+                        }
+                _ ->
+                    HorizontalSplit 
+                        { top = top
+                        , bottom = bottom
+                        , topHeight = topHeight - change.y
+                        }
         SingleImage image ->
             SingleImage 
                 { image 
@@ -155,8 +174,8 @@ applyDrag path change frame =
 --960 x 637 beetle (1.507)
 -- 250 x 80 frame  (3.125)
 
-viewFrame : Int -> Size -> Frame -> Html.Html Msg
-viewFrame borderSize size frame = 
+viewFrame : FramePath -> Int -> Size -> Frame -> Html.Html Msg
+viewFrame path borderSize size frame = 
     case frame of 
         SingleImage image ->
             let 
@@ -181,12 +200,12 @@ viewFrame borderSize size frame =
                           )
                         ]
                     , Html.Events.on "mousedown" 
-                        (Json.Decode.map DragImageStart Mouse.position)
+                        (Json.Decode.map (DragStart path) Mouse.position)
                     ]
                     []
         HorizontalSplit { top, topHeight, bottom } ->
             Html.div []
-            [ viewFrame borderSize { width = size.width, height = topHeight } top
+            [ viewFrame (0 :: path) borderSize { width = size.width, height = topHeight } top
             , Html.div 
                 [ Html.Attributes.style
                     [ ("width", toString size.width ++ "px")
@@ -195,10 +214,10 @@ viewFrame borderSize size frame =
                     , ("cursor", "ns-resize")
                     ]
                 , Html.Events.on "mousedown" 
-                    (Json.Decode.map DragDividerStart Mouse.position)
+                    (Json.Decode.map (DragStart path) Mouse.position)
                 ]
                 []
-            , viewFrame borderSize { width = size.width, height = size.height - topHeight - borderSize } bottom
+            , viewFrame (1 :: path) borderSize { width = size.width, height = size.height - topHeight - borderSize } bottom
             ]
 
 
@@ -217,6 +236,7 @@ viewCanvas borderSize size rootFrame =
                 ]
             ]
             [viewFrame 
+                []
                 borderSize
                 { width = size.width - 2*borderSize
                 , height = size.width - 2*borderSize
