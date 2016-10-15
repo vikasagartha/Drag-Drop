@@ -14,8 +14,13 @@ borderColor =
 type alias Size = 
     { width : Int, height : Int }
 
+type alias Image = 
+    { url :String
+    , size: Size
+    }
+
 type Frame
-    = SingleImage { url : String }
+    = SingleImage Image 
     | HorizontalSplit 
         { top : Frame
         , bottom : Frame
@@ -40,8 +45,16 @@ initialModel =
     , borderSize = 5
     , frame = 
         HorizontalSplit 
-            { top = SingleImage  { url = "http://i.imgur.com/bjjypBA.jpg" }
-            , bottom = SingleImage { url = "http://i.imgur.com/K02jg2O.jpg" }
+            { top = 
+                SingleImage  
+                    { url = "http://i.imgur.com/bjjypBA.jpg"
+                    , size = { width = 960, height = 637 } 
+                    }
+            , bottom = 
+                SingleImage 
+                    { url = "http://i.imgur.com/K02jg2O.jpg" 
+                    , size = { width = 960, height = 618 } 
+                    }
             , topHeight = 80
             }
     , dragState = Nothing 
@@ -91,19 +104,33 @@ applyDrag yChange frame =
 
 --View
 
+--960 x 637 beetle (1.507)
+-- 250 x 80 frame  (3.125)
+
 viewFrame : Int -> Size -> Frame -> Html.Html Msg
 viewFrame borderSize size frame = 
     case frame of 
-        SingleImage { url } ->
-            Html.div
-                [ Html.Attributes.style 
-                    [ ("height", toString size.height ++ "px")
-                    , ("width", toString size.width ++ "px")
-                    , ("background-image", "url("++url++")") 
-                    , ("background-size", "auto " ++ toString size.height ++ "px")
+        SingleImage image ->
+            let 
+                imageRatio = 
+                    toFloat image.size.width / toFloat image.size.height
+                frameRatio = 
+                    toFloat size.width / toFloat size.height
+            in
+                Html.div
+                    [ Html.Attributes.style 
+                        [ ("height", toString size.height ++ "px")
+                        , ("width", toString size.width ++ "px")
+                        , ("background-image", "url("++image.url++")") 
+                        , ("background-size", 
+                            if imageRatio > frameRatio then 
+                                "auto " ++ toString size.height ++ "px"
+                            else 
+                                toString size.width ++ "px auto"
+                          )
+                        ]
                     ]
-                ]
-                []
+                    []
         HorizontalSplit { top, topHeight, bottom } ->
             Html.div []
             [ viewFrame borderSize { width = size.width, height = topHeight } top
