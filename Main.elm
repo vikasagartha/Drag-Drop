@@ -27,16 +27,22 @@ type Frame
     = SingleImage Image 
     | HorizontalSplit 
         { top : Frame
-        , bottom : Frame
         , topHeight : Int
+        , bottom : Frame
         }
+
+type alias FramePath =
+    List Int
 
 type alias Model =
     { canvas : Size
     , frame : Frame 
     , borderSize : Int
-    , dragSliderState : Maybe Mouse.Position
-    , dragImageState : Maybe Mouse.Position
+    , dragState : 
+        Maybe 
+            { startPosition : Mouse.Position
+            , path : FramePath 
+            }
     }
 
 --Init 
@@ -49,23 +55,22 @@ initialModel =
         }
     , borderSize = 5
     , frame = 
-        --HorizontalSplit 
-        --    { top = 
+        HorizontalSplit 
+            { top = 
                 SingleImage  
                     { url = "http://i.imgur.com/bjjypBA.jpg"
                     , size = { width = 960, height = 637 } 
                     , offset = { x = 0, y = 0} 
                     }
-     --       , bottom = 
-     --           SingleImage 
-     --               { url = "http://i.imgur.com/K02jg2O.jpg" 
-     --               , size = { width = 960, height = 618 } 
-     --               , offset = { x = 0, y = 0} 
-     --               }
-     --       , topHeight = 80
-     --       }
-    , dragSliderState = Nothing 
-    , dragImageState = Nothing 
+            , bottom = 
+                SingleImage 
+                    { url = "http://i.imgur.com/K02jg2O.jpg" 
+                    , size = { width = 960, height = 618 } 
+                    , offset = { x = 0, y = 0} 
+                    }
+            , topHeight = 80
+            }
+    , dragState = Nothing 
     }
 
 --Update
@@ -79,67 +84,63 @@ update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
     case Debug.log "msg" msg of
         DragDividerStart position ->
-            ( { model | dragSliderState = Just position }
+            ( { model 
+                | dragState = 
+                    Just 
+                        { startPosition = position
+                        , path = [] --TODO 
+                        } 
+              }
             , Cmd.none
             )
-
         DragImageStart position ->
-            ( { model | dragImageState = Just position }
+            ( { model 
+                | dragState = 
+                    Just 
+                        { startPosition = position
+                        , path = [] --TODO 
+                        } 
+              }
             , Cmd.none
             )
 
         DragMove currentPosition ->
-            case model.dragSliderState of
-                Just startPosition ->
+            case model.dragState of
+                Just { startPosition, path } ->
                     ( { model 
-                        | frame = 
+                        | frame =
                             applyDrag 
-                                (currentPosition.y - startPosition.y) 
+                                path
+                                { x = startPosition.x - currentPosition.x
+                                , y = startPosition.y - currentPosition.y
+                                }
                                 model.frame 
-                        , dragSliderState = Just currentPosition
+                        , dragState = 
+                            Just 
+                                { path = path
+                                , startPosition = currentPosition 
+                                }
                       }
                     , Cmd.none
                     )
                 Nothing ->
-                    case model.dragImageState of
-                        Just startPosition ->
-                            ( { model 
-                                | frame =
-                                    applyImageDrag 
-                                        { x = startPosition.x - currentPosition.x
-                                        , y = startPosition.y - currentPosition.y
-                                        }
-                                        model.frame
-                                , dragImageState = Just currentPosition
-                              }
-                            , Cmd.none
-                            )
-                        Nothing ->
-                            (model, Cmd.none)
+                    (model, Cmd.none)
 
         DragEnd endPosition ->
-            ( { model 
-                | dragSliderState = Nothing
-                , dragImageState = Nothing 
-                }
+            ( { model | dragState = Nothing }
             , Cmd.none
             )
 
-applyDrag : Int -> Frame -> Frame
-applyDrag yChange frame =
+applyDrag : FramePath -> Position -> Frame -> Frame
+applyDrag path change frame =
+    --TODO
     case frame of
         HorizontalSplit {top, topHeight, bottom} ->
             HorizontalSplit 
                 { top = top
                 , bottom = bottom
-                , topHeight = topHeight + yChange
+                , topHeight = topHeight - change.y
                 }
-        SingleImage _ ->
-            frame
-
-applyImageDrag : Position -> Frame -> Frame
-applyImageDrag change frame =
-    case frame of
         SingleImage image ->
             SingleImage 
                 { image 
@@ -148,8 +149,6 @@ applyImageDrag change frame =
                         , y = image.offset.y + change.y 
                         }
                 }
-        HorizontalSplit _ ->
-            frame
 
 --View
 
@@ -239,13 +238,8 @@ view model =
         ]
 
 subscriptions model =
-    case (model.dragSliderState, model.dragImageState) of
-        (Just _, _) ->
-            Sub.batch 
-                [ Mouse.moves DragMove
-                , Mouse.ups DragEnd     
-                ]
-        (_, Just _) ->
+    case model.dragState of
+        Just _ ->
             Sub.batch 
                 [ Mouse.moves DragMove
                 , Mouse.ups DragEnd     
