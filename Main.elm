@@ -26,6 +26,7 @@ type alias Model =
     { canvas : Size
     , frame : Frame 
     , borderSize : Int
+    , dragState : Maybe Mouse.Position
     }
 
 --Init 
@@ -34,25 +35,59 @@ initialModel : Model
 initialModel =
     { canvas = 
         { width = 250
-        , height = 250 
+        , height = 250
         }
-    , borderSize = 5 
+    , borderSize = 5
     , frame = 
         HorizontalSplit 
             { top = SingleImage  { url = "http://i.imgur.com/bjjypBA.jpg" }
             , bottom = SingleImage { url = "http://i.imgur.com/K02jg2O.jpg" }
             , topHeight = 80
             }
+    , dragState = Nothing 
     }
 
 --Update
-type Msg = DragDividerStart Mouse.Position
+type Msg 
+    = DragDividerStart Mouse.Position
+    | DragMove Mouse.Position
+    | DragEnd Mouse.Position
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
     case Debug.log "msg" msg of
         DragDividerStart position ->
-            (model, Cmd.none)
+            ( { model | dragState = Just position }, Cmd.none)
+        DragMove currentPosition ->
+            case model.dragState of
+                Just startPosition ->
+                    ( { model 
+                        | frame = 
+                            applyDrag 
+                                (currentPosition.y - startPosition.y) 
+                                model.frame 
+                        , dragState = Just currentPosition
+                      }
+                    , Cmd.none
+                    )
+                Nothing ->
+                    (model, Cmd.none)
+        DragEnd endPosition ->
+            ( { model | dragState = Nothing }
+            , Cmd.none
+            )
+
+applyDrag : Int -> Frame -> Frame
+applyDrag yChange frame =
+    case frame of
+        HorizontalSplit {top, topHeight, bottom} ->
+            HorizontalSplit 
+                { top = top
+                , bottom = bottom
+                , topHeight = topHeight + yChange
+                }
+        SingleImage _ ->
+            frame
 
 --View
 
@@ -122,12 +157,19 @@ view model =
         , Html.text <| toString model 
         ]
 
-subscriptions =
-    Sub.none
+subscriptions model =
+    case model.dragState of
+        Nothing ->
+            Sub.none
+        Just _ ->
+            Sub.batch 
+                [ Mouse.moves DragMove
+                , Mouse.ups DragEnd     
+                ]
 
 main = Html.App.program
     { init = (initialModel, Cmd.none)
-    , subscriptions = \_ -> Sub.none
+    , subscriptions = subscriptions 
     , update =  update 
     , view =  view 
     }
