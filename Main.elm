@@ -5,28 +5,28 @@ import Html.App
 import Html.Attributes
 import Html.Events
 import Json.Decode
-import Mouse 
+import Mouse
 import ImageSearch
 
 borderColor : String
 borderColor =
     "tan"
 
-type alias Size = 
+type alias Size =
     { width : Int, height : Int }
 
-type alias Position= 
+type alias Position =
     { x : Int, y : Int }
 
-type alias Image = 
+type alias Image =
     { url : String
     , size : Size
     , offset : Position
     }
 
 type Frame
-    = SingleImage Image 
-    | HorizontalSplit 
+    = SingleImage Image
+    | HorizontalSplit
         { top : Frame
         , topHeight : Int
         , bottom : Frame
@@ -37,14 +37,14 @@ type alias FramePath =
 
 type alias Model =
     { canvas : Size
-    , frame : Frame 
+    , frame : Frame
     , borderSize : Int
-    , dragState : 
+    , dragState :
         Maybe 
             { startPosition : Mouse.Position
-            , path : FramePath 
+            , path : FramePath
             }
-    , imageSearch : ImageSearch.Model 
+    , imageSearch : ImageSearch.State
     }
 
 --Init 
@@ -133,16 +133,22 @@ update msg model =
             ( { model | dragState = Nothing }
             , Cmd.none
             )
-        ImageSearchMsg (ImageSearch.ImageSelected {url}) ->
-            ( { model | frame = replaceImage [0] url model.frame }, Cmd.none)
         ImageSearchMsg childMsg ->
             let 
-                (newChildModel, childCmd) =
+                ( newChildState, childCmd, selectedImage ) =
                     ImageSearch.update childMsg model.imageSearch
+
+                newModel =
+                    case selectedImage of
+                        Just newImage ->
+                            { model | frame = replaceImage [0] newImage.url model.frame }
+                        Nothing ->
+                            model
             in 
-                ( { model | imageSearch = newChildModel }
+                ( { newModel | imageSearch = newChildState }
                 , Cmd.map ImageSearchMsg childCmd
-                ) 
+                )
+                    
 
 replaceImage : FramePath -> String -> Frame -> Frame
 replaceImage path newUrl frame =
